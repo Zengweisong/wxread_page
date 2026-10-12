@@ -36,6 +36,26 @@ test('1 percent stays 1 percent, missing progress stays unknown',()=>{
   assert.equal(normalizeBook({bookId:'a'},{book:{progress:100,finishTime:1}}).finished,true);
   assert.equal(normalizeBook({bookId:'a'}).progress,null);
 });
+
+test('book cumulative duration uses readingTime even when recordReadingTime is zero',()=>{
+  const book=normalizeBook({bookId:'a'},{book:{progress:17,readingTime:13128,recordReadingTime:0}});
+  assert.equal(book.seconds,13128);
+  assert.equal(secondsText(book.seconds),'3 小时 38 分钟');
+  const shelf=normalizeShelf({books:[{bookId:'b'}]},{b:{book:{readingTime:12875,recordReadingTime:0}}});
+  assert.equal(shelf.entries[0].seconds,12875);
+  assert.equal(secondsText(shelf.entries[0].seconds),'3 小时 34 分钟');
+});
+
+test('book duration preserves true zero, supports legacy responses and rejects invalid values',()=>{
+  assert.equal(normalizeBook({},{book:{readingTime:0,recordReadingTime:900}}).seconds,0);
+  assert.equal(normalizeBook({},{book:{readingTime:'2265',recordReadingTime:0}}).seconds,2265);
+  assert.equal(normalizeBook({},{book:{recordReadingTime:10740}}).seconds,10740);
+  assert.equal(normalizeBook({},{book:{readingTime:null,recordReadingTime:900}}).seconds,900);
+  assert.equal(normalizeBook({},{book:{}}).seconds,null);
+  for(const readingTime of [-60,'invalid',Infinity,'',false]){
+    assert.equal(normalizeBook({},{book:{readingTime}}).seconds,null);
+  }
+});
 test('counts highlights, personal thoughts and bookmarks exactly once',()=>{
   const notebook=normalizeNotebook({bookId:'a',book:{title:'Book'},noteCount:3,reviewCount:2,bookmarkCount:1});assert.equal(notebook.total,6);
   const notes=normalizeNotes({updated:[{type:0,bookmarkId:'bookmark'},{type:1,bookmarkId:'highlight',markText:'Text'}]},{reviews:[{review:{reviewId:'r',content:'Thought',abstract:'Original'}}]});

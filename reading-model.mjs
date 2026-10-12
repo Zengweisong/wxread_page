@@ -4,7 +4,10 @@ export const dateText=value=>!value?'未提供':new Intl.DateTimeFormat('sv-SE',
 export function safeUrl(value,deepLink=false){try{const url=new URL(value);return (deepLink?['https:','weread:','wereadapp:']:['https:']).includes(url.protocol)?url.href:'';}catch{return '';}}
 export function normalizeBook(raw={},progress=null,kind='book'){
   const p=progress?.book;
-  return {id:String(raw.bookId??raw.albumId??''),title:raw.title||raw.name||'未命名内容',author:raw.author||raw.authorName||'作者未提供',coverUrl:safeUrl(raw.cover),category:typeof raw.category==='string'?raw.category:'',progress:p?.progress!=null?Number(p.progress):null,finished:raw.finishReading===1||(p?.progress===100&&Boolean(p?.finishTime)),seconds:p?.recordReadingTime??null,lastRead:p?.updateTime||raw.readUpdateTime||0,deepLink:safeUrl(raw.deepLink,true),kind,isTop:raw.isTop===1,intro:raw.intro||''};
+  // Live getprogress responses put reading duration in readingTime; retain the documented legacy field as a fallback.
+  const duration=p?.readingTime??p?.recordReadingTime;
+  const seconds=(typeof duration==='number'||typeof duration==='string'&&duration.trim()!=='')&&Number.isFinite(Number(duration))&&Number(duration)>=0?Number(duration):null;
+  return {id:String(raw.bookId??raw.albumId??''),title:raw.title||raw.name||'未命名内容',author:raw.author||raw.authorName||'作者未提供',coverUrl:safeUrl(raw.cover),category:typeof raw.category==='string'?raw.category:'',progress:p?.progress!=null?Number(p.progress):null,finished:raw.finishReading===1||(p?.progress===100&&Boolean(p?.finishTime)),seconds,lastRead:p?.updateTime||raw.readUpdateTime||0,deepLink:safeUrl(raw.deepLink,true),kind,isTop:raw.isTop===1,intro:raw.intro||''};
 }
 export function normalizeShelf(raw={},progress={}){
   const books=(raw.books||[]).map(book=>normalizeBook(book,progress[book.bookId]));
